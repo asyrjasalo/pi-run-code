@@ -61,7 +61,7 @@ declare const fs: typeof import('fs');
 }
 
 export function generatePackageTypeDefs(
-  packages: Array<{ specifier: string; varName: string; hasTypes: boolean }>
+  packages: Array<{ specifier: string; varName: string; hasTypes: boolean }>,
 ): string {
   if (packages.length === 0) return "";
 

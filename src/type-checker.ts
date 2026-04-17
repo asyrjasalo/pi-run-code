@@ -1,8 +1,8 @@
 // type-checker.ts — TypeScript type checking via ts.createProgram with virtual FS.
 
-import ts from "typescript";
 import fsReal from "node:fs";
 import pathReal from "node:path";
+import ts from "typescript";
 
 export interface TypeCheckError {
   line: number;
@@ -81,7 +81,7 @@ export function initTypeChecker(): void {
   directories = new Set();
 
   const tsLibDir = pathReal.dirname(
-    require.resolve("typescript/lib/lib.es2022.d.ts")
+    require.resolve("typescript/lib/lib.es2022.d.ts"),
   );
   for (const name of LIB_NAMES) {
     const filePath = pathReal.join(tsLibDir, name);
@@ -105,11 +105,13 @@ export function initTypeChecker(): void {
   }
 }
 
-export function loadPackageTypes(packages: Array<{
-  specifier: string;
-  packageDir: string;
-  hasTypes: boolean;
-}>): void {
+export function loadPackageTypes(
+  packages: Array<{
+    specifier: string;
+    packageDir: string;
+    hasTypes: boolean;
+  }>,
+): void {
   if (!sourceFiles) initTypeChecker();
 
   for (const pkg of packages) {
@@ -122,7 +124,7 @@ export function loadPackageTypes(packages: Array<{
       try {
         const pkgJson = JSON.parse(fsReal.readFileSync(pkgJsonPath, "utf-8"));
         if (pkgJson.types || pkgJson.typings || pkgJson.exports?.["."]?.types) {
-          const prefix = "node_modules/" + getPackageName(pkg.specifier);
+          const prefix = `node_modules/${getPackageName(pkg.specifier)}`;
           loadPackageDir(pkg.packageDir, prefix);
           continue;
         }
@@ -134,7 +136,7 @@ export function loadPackageTypes(packages: Array<{
       : pkg.specifier.split("/")[0];
     const typesDir = pathReal.join(nodeModulesDir, "@types", baseName);
     if (fsReal.existsSync(typesDir)) {
-      const prefix = "node_modules/@types/" + baseName;
+      const prefix = `node_modules/@types/${baseName}`;
       loadPackageDir(typesDir, prefix);
     }
   }
@@ -149,26 +151,31 @@ function getPackageName(specifier: string): string {
 }
 
 function addFile(virtualPath: string, content: string): void {
-  fileContent!.set(virtualPath, content);
-  sourceFiles!.set(
+  fileContent?.set(virtualPath, content);
+  sourceFiles?.set(
     virtualPath,
-    ts.createSourceFile(virtualPath, content, ts.ScriptTarget.ESNext, true)
+    ts.createSourceFile(virtualPath, content, ts.ScriptTarget.ESNext, true),
   );
   let dir = virtualPath;
   while (true) {
-    const parent = dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : "";
+    const parent = dir.includes("/")
+      ? dir.substring(0, dir.lastIndexOf("/"))
+      : "";
     if (parent === dir) break;
     dir = parent;
-    if (dir) directories!.add(dir);
+    if (dir) directories?.add(dir);
   }
 }
 
 function loadPackageDir(realDir: string, virtualPrefix: string): void {
   for (const entry of fsReal.readdirSync(realDir, { withFileTypes: true })) {
-    const virtualPath = virtualPrefix + "/" + entry.name;
+    const virtualPath = `${virtualPrefix}/${entry.name}`;
     if (entry.isFile()) {
       if (entry.name.endsWith(".d.ts") || entry.name === "package.json") {
-        addFile(virtualPath, fsReal.readFileSync(pathReal.join(realDir, entry.name), "utf-8"));
+        addFile(
+          virtualPath,
+          fsReal.readFileSync(pathReal.join(realDir, entry.name), "utf-8"),
+        );
       }
     } else if (entry.isDirectory() && !entry.name.startsWith(".")) {
       loadPackageDir(pathReal.join(realDir, entry.name), virtualPath);
@@ -180,32 +187,32 @@ function normalizePath(p: string): string {
   return p.startsWith("/") ? p.slice(1) : p;
 }
 
-export function typeCheck(
-  userCode: string,
-  typeDefs: string
-): TypeCheckResult {
+export function typeCheck(userCode: string, typeDefs: string): TypeCheckResult {
   if (!sourceFiles) {
     initTypeChecker();
+  }
+  const fileMap = sourceFiles;
+  if (!fileMap) {
+    throw new Error("pi-run-code: type checker not initialized");
   }
 
   const typeDefLineCount = typeDefs.split("\n").length;
   const prefixLineCount = typeDefLineCount + 1;
 
-  const fullSource =
-    typeDefs + "\n(async () => {\n" + userCode + "\n})();\n";
+  const fullSource = `${typeDefs}\n(async () => {\n${userCode}\n})();\n`;
   const fileName = "codemode.ts";
   const sourceFile = ts.createSourceFile(
     fileName,
     fullSource,
     ts.ScriptTarget.ESNext,
-    true
+    true,
   );
 
   const host: ts.CompilerHost = {
     getSourceFile: (name: string) => {
       if (name === fileName) return sourceFile;
       const normalized = normalizePath(name);
-      return sourceFiles!.get(name) ?? sourceFiles!.get(normalized);
+      return sourceFiles?.get(name) ?? sourceFiles?.get(normalized);
     },
     getDefaultLibFileName: () => "lib.es5.d.ts",
     writeFile: () => {},
@@ -216,21 +223,26 @@ export function typeCheck(
     fileExists: (f: string) => {
       if (f === fileName) return true;
       const normalized = normalizePath(f);
-      return fileContent!.has(f) || fileContent!.has(normalized);
+      return (
+        !!fileContent && (fileContent.has(f) || fileContent.has(normalized))
+      );
     },
     readFile: (f: string) => {
       const normalized = normalizePath(f);
-      return fileContent!.get(f) ?? fileContent!.get(normalized);
+      return fileContent?.get(f) ?? fileContent?.get(normalized);
     },
     directoryExists: (dir: string) => {
       const normalized = normalizePath(dir);
-      return directories!.has(dir) || directories!.has(normalized);
+      return (
+        !!directories && (directories.has(dir) || directories.has(normalized))
+      );
     },
     getDirectories: (dir: string) => {
       const normalized = normalizePath(dir);
-      const prefix = normalized ? normalized + "/" : "";
+      const prefix = normalized ? `${normalized}/` : "";
       const subdirs = new Set<string>();
-      for (const d of directories!) {
+      if (!directories) return [];
+      for (const d of directories) {
         if (d.startsWith(prefix) && d !== normalized) {
           const rest = d.slice(prefix.length);
           const firstSegment = rest.split("/")[0];
@@ -243,7 +255,7 @@ export function typeCheck(
   };
 
   const program = ts.createProgram(
-    [fileName, ...sourceFiles!.keys()],
+    [fileName, ...fileMap.keys()],
     {
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.ESNext,
@@ -254,7 +266,7 @@ export function typeCheck(
       typeRoots: ["node_modules/@types"],
       types: ["node"],
     },
-    host
+    host,
   );
 
   const syntaxDiags = program.getSyntacticDiagnostics(sourceFile);

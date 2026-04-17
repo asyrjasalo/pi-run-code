@@ -1,6 +1,9 @@
-import type { ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionContext,
+  ToolDefinition,
+} from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { executeCode, type ExecutionResult } from "./executor.js";
+import { type ExecutionResult, executeCode } from "./executor.js";
 
 export interface RunCodeToolOptions {
   cwd: string;
@@ -13,7 +16,15 @@ export interface RunCodeToolOptions {
 }
 
 export function createRunCodeTool(options: RunCodeToolOptions): ToolDefinition {
-  const { cwd, shellPrefix, userPackages = {}, timeout, maxOutputSize, packageDescriptions, typeDefs } = options;
+  const {
+    cwd,
+    shellPrefix,
+    userPackages = {},
+    timeout,
+    maxOutputSize,
+    packageDescriptions,
+    typeDefs,
+  } = options;
 
   const packageSection = packageDescriptions
     ? `\n\nConfigured npm packages (available as globals):\n${packageDescriptions}`
@@ -37,7 +48,8 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
 
     parameters: Type.Object({
       code: Type.String({
-        description: "TypeScript or JavaScript code only. Has $ (zx shell), print(), console, require(), and configured npm packages.",
+        description:
+          "TypeScript or JavaScript code only. Has $ (zx shell), print(), console, require(), and configured npm packages.",
       }),
     }),
 
@@ -46,7 +58,7 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
       params: { code: string },
       signal: AbortSignal | undefined,
       onUpdate: any,
-      _ctx: ExtensionContext
+      _ctx: ExtensionContext,
     ) {
       const result: ExecutionResult = await executeCode(params.code, {
         cwd,
@@ -65,7 +77,7 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
           .join("\n");
 
         let text: string;
-        if (result.errorKind === 'type') {
+        if (result.errorKind === "type") {
           text = `Type errors (code was NOT executed):\n${errorText}\n\nFix the type errors and try again.`;
         } else {
           text = `Runtime error:\n${errorText}\n\nThe code executed but threw an error.`;
@@ -109,12 +121,14 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
       };
     },
 
-    renderCall(args: { code: string }, theme: any) {
+    renderCall(args: { code: string }, _theme: any) {
       try {
         const { highlightCode } = require("@mariozechner/pi-coding-agent");
         const { Text } = require("@mariozechner/pi-tui");
         const highlighted = highlightCode(args.code.trim(), "typescript");
-        const text = Array.isArray(highlighted) ? highlighted.join("\n") : String(highlighted);
+        const text = Array.isArray(highlighted)
+          ? highlighted.join("\n")
+          : String(highlighted);
         return new Text(text, 0, 0);
       } catch {
         const { Text } = require("@mariozechner/pi-tui");
@@ -125,14 +139,14 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
     renderResult(
       result: any,
       options: { expanded: boolean; isPartial: boolean },
-      theme: any
+      theme: any,
     ) {
       const { Text } = require("@mariozechner/pi-tui");
       const { isPartial, expanded } = options;
 
       if (isPartial) {
         const msg = result.details?.progress
-          ? result.content?.[0]?.text ?? "Executing..."
+          ? (result.content?.[0]?.text ?? "Executing...")
           : "Executing...";
         return new Text(theme.fg("warning", msg), 0, 0);
       }
@@ -150,8 +164,10 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
           return new Text(theme.fg("error", `✗ ${firstError}`) + elapsed, 0, 0);
         }
         const lines = errors
-          .map((e: any) =>
-            theme.fg("error", e.line > 0 ? `Line ${e.line}: ` : "") + e.message
+          .map(
+            (e: any) =>
+              theme.fg("error", e.line > 0 ? `Line ${e.line}: ` : "") +
+              e.message,
           )
           .join("\n");
         return new Text(lines + elapsed, 0, 0);
@@ -167,7 +183,8 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
             preview +
             theme.fg("dim", `\n... ${lineCount - 3} more lines`) +
             elapsed,
-          0, 0
+          0,
+          0,
         );
       }
 

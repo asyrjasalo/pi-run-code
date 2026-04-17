@@ -1,5 +1,5 @@
-import { piRunCodeUnsandboxedAcknowledged } from "../src/pi-run-code-env.js";
 import assert from "node:assert/strict";
+import { piRunCodeUnsandboxedAcknowledged } from "../src/pi-run-code-env.js";
 
 let passed = 0;
 let failed = 0;

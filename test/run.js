@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const { buildSync } = require("esbuild");
-const path = require("path");
-const fs = require("fs");
+const path = require("node:path");
+const fs = require("node:fs");
 
 fs.mkdirSync(path.join(__dirname, ".cache"), { recursive: true });
 

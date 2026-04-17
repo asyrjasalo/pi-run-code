@@ -19,7 +19,11 @@
     "test/"
   ],
   "scripts": {
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "tsc": "tsc --noEmit"
   },
   "pi": {
     "extensions": [
@@ -32,14 +36,15 @@
     "zx": "^8.8.5"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-agent-core": "*",
-    "@sinclair/typebox": "*",
-    "@mariozechner/pi-tui": "*"
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@mariozechner/pi-coding-agent": "*",
-    "@sinclair/typebox": "*",
-    "@mariozechner/pi-tui": "*"
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
   }
 }

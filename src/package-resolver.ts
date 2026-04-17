@@ -1,7 +1,13 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface ResolvedPackage {
   specifier: string;
@@ -34,11 +40,14 @@ function specifierToVarName(specifier: string): string {
   name = name.split("/")[0];
   name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
   name = name.replace(/[^a-zA-Z0-9_$]/g, "");
-  if (/^[0-9]/.test(name)) name = "_" + name;
+  if (/^[0-9]/.test(name)) name = `_${name}`;
   return name;
 }
 
-function loadConfig(configPath: string, warnings: string[]): RunCodeConfig | null {
+function loadConfig(
+  configPath: string,
+  warnings: string[],
+): RunCodeConfig | null {
   if (!existsSync(configPath)) return null;
   try {
     const raw = readFileSync(configPath, "utf8");
@@ -65,7 +74,10 @@ function normalizeEntry(
   };
 }
 
-function findPackageDir(specifier: string, nodeModulesDir: string): string | null {
+function findPackageDir(
+  specifier: string,
+  nodeModulesDir: string,
+): string | null {
   const parts = specifier.split("/");
   const pkgDir = parts[0].startsWith("@")
     ? join(nodeModulesDir, parts[0], parts[1])
@@ -73,7 +85,11 @@ function findPackageDir(specifier: string, nodeModulesDir: string): string | nul
   return existsSync(pkgDir) ? pkgDir : null;
 }
 
-function packageHasTypes(specifier: string, pkgDir: string, nodeModulesDir: string): boolean {
+function packageHasTypes(
+  specifier: string,
+  pkgDir: string,
+  nodeModulesDir: string,
+): boolean {
   const pkgJsonPath = join(pkgDir, "package.json");
   if (existsSync(pkgJsonPath)) {
     try {
@@ -102,7 +118,10 @@ function ensureInstalledAndResolve(
 
   const desiredDeps: Record<string, string> = {};
   let optionalTypeDeps: Record<string, string> | undefined;
-  const entryMap = new Map<string, { version: string; varName: string; description?: string }>();
+  const entryMap = new Map<
+    string,
+    { version: string; varName: string; description?: string }
+  >();
 
   for (const [specifier, value] of entries) {
     const normalized = normalizeEntry(specifier, value);
@@ -114,7 +133,7 @@ function ensureInstalledAndResolve(
         ? specifier.replace("@", "").replace("/", "__")
         : specifier.split("/")[0];
       if (!optionalTypeDeps) optionalTypeDeps = {};
-      optionalTypeDeps["@types/" + baseName] = "*";
+      optionalTypeDeps[`@types/${baseName}`] = "*";
     }
   }
 
@@ -163,7 +182,7 @@ function ensureInstalledAndResolve(
       if (optionalTypeDeps && Object.keys(optionalTypeDeps).length > 0) {
         pkgJson.optionalDependencies = optionalTypeDeps;
       }
-      writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + "\n");
+      writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
 
       execSync("npm install --no-audit --no-fund", {
         cwd: installDir,
@@ -171,7 +190,9 @@ function ensureInstalledAndResolve(
         timeout: 60_000,
       });
     } catch (e: any) {
-      warnings.push(`Failed to install packages in ${installDir}: ${e.message}`);
+      warnings.push(
+        `Failed to install packages in ${installDir}: ${e.message}`,
+      );
       return [];
     }
   }
@@ -185,12 +206,16 @@ function ensureInstalledAndResolve(
       const mod = require(resolvedPath);
 
       const pkgDir = findPackageDir(specifier, nodeModulesDir);
-      const hasTypes = pkgDir ? packageHasTypes(specifier, pkgDir, nodeModulesDir) : false;
+      const hasTypes = pkgDir
+        ? packageHasTypes(specifier, pkgDir, nodeModulesDir)
+        : false;
 
       let description = entry.description;
       if (!description && pkgDir) {
         try {
-          const pkgJson = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
+          const pkgJson = JSON.parse(
+            readFileSync(join(pkgDir, "package.json"), "utf8"),
+          );
           description = pkgJson.description;
         } catch {}
       }
@@ -201,7 +226,8 @@ function ensureInstalledAndResolve(
         versionRange: entry.version,
         varName: entry.varName,
         module: mod,
-        packageDir: pkgDir ?? join(installDir, "node_modules", ...specifier.split("/")),
+        packageDir:
+          pkgDir ?? join(installDir, "node_modules", ...specifier.split("/")),
         hasTypes,
         scope,
         description,
@@ -219,10 +245,10 @@ function ensureGitignore(piDir: string, entryToIgnore: string) {
   if (existsSync(gitignorePath)) {
     const content = readFileSync(gitignorePath, "utf8");
     if (content.includes(entryToIgnore)) return;
-    appendFileSync(gitignorePath, entryToIgnore + "/\n");
+    appendFileSync(gitignorePath, `${entryToIgnore}/\n`);
   } else {
     mkdirSync(piDir, { recursive: true });
-    writeFileSync(gitignorePath, entryToIgnore + "/\n");
+    writeFileSync(gitignorePath, `${entryToIgnore}/\n`);
   }
 }
 
@@ -235,7 +261,12 @@ export function loadUserPackages(cwd: string): LoadResult {
   const globalConfig = loadConfig(globalConfigPath, warnings);
   if (globalConfig?.packages && Object.keys(globalConfig.packages).length > 0) {
     ensureGitignore(join(homedir(), ".pi", "agent"), "pi-run-code");
-    const resolved = ensureInstalledAndResolve(globalConfig, globalInstallDir, "global", warnings);
+    const resolved = ensureInstalledAndResolve(
+      globalConfig,
+      globalInstallDir,
+      "global",
+      warnings,
+    );
     for (const pkg of resolved) {
       allPackages.set(pkg.varName, pkg);
     }
@@ -244,9 +275,17 @@ export function loadUserPackages(cwd: string): LoadResult {
   const projectConfigPath = join(cwd, ".pi", "pi-run-code.json");
   const projectInstallDir = join(cwd, ".pi", "pi-run-code");
   const projectConfig = loadConfig(projectConfigPath, warnings);
-  if (projectConfig?.packages && Object.keys(projectConfig.packages).length > 0) {
+  if (
+    projectConfig?.packages &&
+    Object.keys(projectConfig.packages).length > 0
+  ) {
     ensureGitignore(join(cwd, ".pi"), "pi-run-code");
-    const resolved = ensureInstalledAndResolve(projectConfig, projectInstallDir, "project", warnings);
+    const resolved = ensureInstalledAndResolve(
+      projectConfig,
+      projectInstallDir,
+      "project",
+      warnings,
+    );
     for (const pkg of resolved) {
       allPackages.set(pkg.varName, pkg);
     }

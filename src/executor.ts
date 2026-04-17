@@ -3,16 +3,18 @@
 // Transpiles TS → JS via esbuild, then runs in an isolated AsyncFunction
 // with zx shell globals, user packages, and timeout support.
 
+import { createRequire } from "node:module";
+import { performance } from "node:perf_hooks";
 import { transformSync } from "esbuild";
 import { $ } from "zx";
-import { performance } from "node:perf_hooks";
-import { createRequire } from "node:module";
-import { typeCheck, type TypeCheckError } from "./type-checker.js";
+import { type TypeCheckError, typeCheck } from "./type-checker.js";
 
 const nodeRequire: NodeRequire = createRequire(
   typeof __filename !== "undefined"
     ? __filename
-    : (() => { throw new Error("CJS context required"); })()
+    : (() => {
+        throw new Error("CJS context required");
+      })(),
 );
 
 // --- Types ---
@@ -45,43 +47,54 @@ interface ExecutionOptions {
 // --- Transpile ---
 
 function rewriteImports(code: string): string {
-  return code.split("\n").map(line => {
-    const trimmed = line.trimStart();
-    const indent = line.slice(0, line.length - trimmed.length);
+  return code
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trimStart();
+      const indent = line.slice(0, line.length - trimmed.length);
 
-    // import { a, b } from 'module'
-    let m = trimmed.match(/^import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]\s*;?\s*$/);
-    if (m) {
-      const names = m[1].split(",").map(s => s.trim()).filter(Boolean);
-      const requires = names.map(n => {
-        const parts = n.split(/\s+as\s+/);
-        const orig = parts[0].trim();
-        const alias = parts[1]?.trim() ?? orig;
-        return `const ${alias} = require("${m[2]}").${orig};`;
-      });
-      return indent + requires.join(" ");
-    }
+      // import { a, b } from 'module'
+      let m = trimmed.match(
+        /^import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]\s*;?\s*$/,
+      );
+      if (m) {
+        const specifier = m[2];
+        const names = m[1]
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const requires = names.map((n) => {
+          const parts = n.split(/\s+as\s+/);
+          const orig = parts[0].trim();
+          const alias = parts[1]?.trim() ?? orig;
+          return `const ${alias} = require("${specifier}").${orig};`;
+        });
+        return indent + requires.join(" ");
+      }
 
-    // import defaultExport from 'module'
-    m = trimmed.match(/^import\s+(\w+)\s+from\s*['"]([^'"]+)['"]\s*;?\s*$/);
-    if (m) {
-      return `${indent}const ${m[1]} = require("${m[2]}");`;
-    }
+      // import defaultExport from 'module'
+      m = trimmed.match(/^import\s+(\w+)\s+from\s*['"]([^'"]+)['"]\s*;?\s*$/);
+      if (m) {
+        return `${indent}const ${m[1]} = require("${m[2]}");`;
+      }
 
-    // import * as ns from 'module'
-    m = trimmed.match(/^import\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"]\s*;?\s*$/);
-    if (m) {
-      return `${indent}const ${m[1]} = require("${m[2]}");`;
-    }
+      // import * as ns from 'module'
+      m = trimmed.match(
+        /^import\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"]+)['"]\s*;?\s*$/,
+      );
+      if (m) {
+        return `${indent}const ${m[1]} = require("${m[2]}");`;
+      }
 
-    // import 'module' (side-effect)
-    m = trimmed.match(/^import\s*['"]([^'"]+)['"]\s*;?\s*$/);
-    if (m) {
-      return `${indent}require("${m[1]}");`;
-    }
+      // import 'module' (side-effect)
+      m = trimmed.match(/^import\s*['"]([^'"]+)['"]\s*;?\s*$/);
+      if (m) {
+        return `${indent}require("${m[1]}");`;
+      }
 
-    return line;
-  }).join("\n");
+      return line;
+    })
+    .join("\n");
 }
 
 function transpile(code: string): string {
@@ -109,7 +122,10 @@ function parseTypeErrors(diagnosticText: string): ExecutionError[] {
   for (const line of lines) {
     const match = line.match(/^.*?\((\d+),\d+\):\s+error\s+(TS\d+):\s+(.+)$/);
     if (match) {
-      errors.push({ line: parseInt(match[1], 10), message: `${match[2]}: ${match[3]}` });
+      errors.push({
+        line: parseInt(match[1], 10),
+        message: `${match[2]}: ${match[3]}`,
+      });
     }
   }
   // Fallback: if no structured errors parsed, return the whole text
@@ -123,13 +139,13 @@ function parseTypeErrors(diagnosticText: string): ExecutionError[] {
 
 export async function executeCode(
   code: string,
-  options: ExecutionOptions
+  options: ExecutionOptions,
 ): Promise<ExecutionResult> {
   const {
     cwd,
-    timeout = 30_000,
+    timeout: _timeout = 30_000,
     maxOutputSize = 100_000,
-    signal,
+    signal: _signal,
     shellPrefix,
     userPackages = {},
     typeDefs,
@@ -166,7 +182,10 @@ export async function executeCode(
     return {
       success: false,
       errorKind: "type",
-      errors: errors.length > 0 ? errors : [{ line: 0, message: err.message || "Transpilation failed" }],
+      errors:
+        errors.length > 0
+          ? errors
+          : [{ line: 0, message: err.message || "Transpilation failed" }],
       logs: [],
       elapsedMs,
     };
@@ -174,7 +193,9 @@ export async function executeCode(
 
   // 2. Build execution globals
   const print = (...args: unknown[]) => {
-    const text = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a, null, 2))).join(" ");
+    const text = args
+      .map((a) => (typeof a === "string" ? a : JSON.stringify(a, null, 2)))
+      .join(" ");
     logs.push(text);
   };
 
@@ -224,7 +245,7 @@ export async function executeCode(
 
   let returnValue: unknown;
   try {
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     const fn = new AsyncFunction(...globalKeys, wrappedCode);
     returnValue = await fn(...globalValues);
   } catch (err: any) {
@@ -245,10 +266,11 @@ export async function executeCode(
   if (maxOutputSize > 0) {
     let totalSize = finalLogs.reduce((sum, l) => sum + l.length, 0);
     while (totalSize > maxOutputSize && finalLogs.length > 1) {
-      totalSize -= finalLogs.pop()!.length;
+      const last = finalLogs.pop();
+      if (last !== undefined) totalSize -= last.length;
     }
     if (totalSize > maxOutputSize && finalLogs.length > 0) {
-      finalLogs = [finalLogs[0].slice(0, maxOutputSize) + "\n... (truncated)"];
+      finalLogs = [`${finalLogs[0].slice(0, maxOutputSize)}\n... (truncated)`];
     }
   }
 
