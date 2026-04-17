@@ -4,15 +4,7 @@ Pi CLI extension that adds a `run_code` tool for executing TypeScript/JavaScript
 
 ## Install
 
-```
-pi install extensions/pi-run-code
-```
-
-Or load ad-hoc:
-
-```
-pi -e ~/.pi/agent/extensions/pi-run-code/src/index.ts
-```
+`pi install git:github.com/asyrjasalo/pi-run-code`
 
 ## Environment
 
