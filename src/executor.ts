@@ -31,7 +31,7 @@ export interface ExecutionResult {
   elapsedMs: number;
 }
 
-export interface ExecutionOptions {
+interface ExecutionOptions {
   cwd: string;
   timeout?: number;
   maxOutputSize?: number;

@@ -14,17 +14,17 @@ export interface ResolvedPackage {
   description: string;
 }
 
-export interface PackageSpec {
+interface PackageSpec {
   version: string;
   as?: string;
   description?: string;
 }
 
-export interface RunCodeConfig {
+interface RunCodeConfig {
   packages?: Record<string, string | PackageSpec>;
 }
 
-export interface LoadResult {
+interface LoadResult {
   packages: ResolvedPackage[];
   warnings: string[];
 }

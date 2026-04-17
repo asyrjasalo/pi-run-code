@@ -10,7 +10,7 @@ export interface TypeCheckError {
   message: string;
 }
 
-export interface TypeCheckResult {
+interface TypeCheckResult {
   errors: TypeCheckError[];
 }
 

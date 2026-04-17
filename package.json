@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "esbuild": "^0.27.3",
-    "fs-extra": "^11.3.4",
     "typescript": "^5.9.3",
     "zx": "^8.8.5"
   },
@@ -39,9 +38,7 @@
     "@mariozechner/pi-tui": "*"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
     "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-agent-core": "*",
     "@sinclair/typebox": "*",
     "@mariozechner/pi-tui": "*"
   }
