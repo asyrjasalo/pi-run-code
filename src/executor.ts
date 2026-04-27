@@ -20,7 +20,7 @@ const nodeRequire: NodeRequire = createRequire(
 
 // --- Types ---
 
-export interface ExecutionError {
+interface ExecutionError {
   line: number;
   message: string;
 }
@@ -335,3 +335,4 @@ async function executeUnsandboxed(
     elapsedMs,
   };
 }
+// test

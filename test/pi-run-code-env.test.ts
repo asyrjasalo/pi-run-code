@@ -1,28 +1,6 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { piRunCodeUnsandboxedAcknowledged } from "../src/pi-run-code-env.js";
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void) {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err: any) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
-    failed++;
-  }
-}
-
-function summarize() {
-  const total = passed + failed;
-  console.log(`\n${passed}/${total} passed, ${failed} failed`);
-  if (failed > 0) process.exit(1);
-}
-
-console.log("\npi-run-code-env: piRunCodeUnsandboxedAcknowledged");
 
 test("undefined is false", () => {
   assert.equal(piRunCodeUnsandboxedAcknowledged(undefined), false);
@@ -69,5 +47,3 @@ test("leading/trailing space accepted for true values", () => {
   assert.equal(piRunCodeUnsandboxedAcknowledged("\t1\n"), true);
   assert.equal(piRunCodeUnsandboxedAcknowledged(" yes "), true);
 });
-
-summarize();

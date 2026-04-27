@@ -29,15 +29,12 @@
   "tdd": {
     "phase": "idle",
     "testFiles": [],
-    "sourceFiles": [
-      "src/executor.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/executor.ts"
-    ],
+    "sourceFiles": [],
     "redVerificationPending": false
   },
   "debug": {
     "active": false,
-    "investigated": true,
+    "investigated": false,
     "fixAttempts": 0
   },
   "verification": {
