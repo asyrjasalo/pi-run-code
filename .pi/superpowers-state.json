@@ -1,19 +1,19 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "complete",
-      "plan": "complete",
-      "execute": "complete",
-      "verify": "complete",
-      "review": "complete",
-      "finish": "complete"
+      "brainstorm": "pending",
+      "plan": "pending",
+      "execute": "pending",
+      "verify": "pending",
+      "review": "pending",
+      "finish": "pending"
     },
-    "currentPhase": "finish",
+    "currentPhase": null,
     "artifacts": {
       "brainstorm": null,
       "plan": null,
-      "execute": "d0ea082",
-      "verify": "73/73 tests pass",
+      "execute": null,
+      "verify": null,
       "review": null,
       "finish": null
     },
@@ -27,27 +27,18 @@
     }
   },
   "tdd": {
-    "phase": "green",
-    "testFiles": [
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/test/executor.test.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/test/sandbox-executor.test.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/test/run.js"
-    ],
-    "sourceFiles": [
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/sandbox-executor.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/executor.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/index.ts",
-      "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/run-code-tool.ts"
-    ],
+    "phase": "idle",
+    "testFiles": [],
+    "sourceFiles": [],
     "redVerificationPending": false
   },
   "debug": {
     "active": false,
-    "investigated": true,
+    "investigated": false,
     "fixAttempts": 0
   },
   "verification": {
-    "verified": true,
+    "verified": false,
     "verificationWaived": false
   }
 }
