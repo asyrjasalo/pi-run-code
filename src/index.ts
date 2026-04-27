@@ -1,16 +1,17 @@
 // index.ts — Pi Run Code extension entry point.
 //
-// Adds a `run_code` tool that executes TypeScript code via esbuild + AsyncFunction.
+// Adds a `run_code` tool that executes TypeScript code.
 // Does NOT replace or disable any existing Pi tools.
 //
-// Features:
-// - Execute arbitrary TypeScript with shell access (zx)
-// - Auto-install npm packages via .pi/pi-run-code.json config
-// - Runs in the same working directory as the Pi agent
-// - Type-checked before execution
+// Execution modes:
+// - **Sandboxed (default)**: Code runs inside a secure-exec V8 isolate
+//   with deny-by-default permissions (no fs, no network, no child processes).
+// - **Unsandboxed**: Set PI_RUN_CODE_UNSANDBOXED=1 to use the
+//   AsyncFunction path with full host access (zx shell, require, etc.).
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { SettingsManager } from "@mariozechner/pi-coding-agent";
+import { disposeSandbox } from "./executor.js";
 import { loadUserPackages, type ResolvedPackage } from "./package-resolver.js";
 import { piRunCodeUnsandboxedAcknowledged } from "./pi-run-code-env.js";
 import { createRunCodeTool, type RunCodeToolOptions } from "./run-code-tool.js";
@@ -21,11 +22,14 @@ import {
 } from "./type-generator.js";
 
 export default function runCodeExtension(pi: ExtensionAPI) {
-  if (!piRunCodeUnsandboxedAcknowledged(process.env.PI_RUN_CODE_UNSANDBOXED)) {
+  const unsandboxed = piRunCodeUnsandboxedAcknowledged(
+    process.env.PI_RUN_CODE_UNSANDBOXED,
+  );
+
+  if (unsandboxed) {
     console.warn(
-      "pi-run-code: extension not loaded — set PI_RUN_CODE_UNSANDBOXED to 1, true, or yes before starting pi.",
+      "pi-run-code: running in UNSANDBOXED mode — code has full host access.",
     );
-    return;
   }
   let userPackages: ResolvedPackage[] = [];
   let userPackageMap: Record<string, unknown> = {};
@@ -70,7 +74,13 @@ export default function runCodeExtension(pi: ExtensionAPI) {
     userPackages: userPackageMap,
     packageDescriptions,
     typeDefs,
+    sandboxed: !unsandboxed,
   };
 
   pi.registerTool(createRunCodeTool(toolOptions));
+
+  // Cleanup sandbox runtime on process exit
+  process.on("exit", () => {
+    disposeSandbox();
+  });
 }

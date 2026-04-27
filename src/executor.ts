@@ -1,12 +1,13 @@
-// executor.ts — Execute TypeScript code via esbuild + AsyncFunction.
+// executor.ts — Execute TypeScript code via esbuild + AsyncFunction or secure-exec sandbox.
 //
-// Transpiles TS → JS via esbuild, then runs in an isolated AsyncFunction
-// with zx shell globals, user packages, and timeout support.
+// When `sandboxed: true` (default), code runs inside a secure-exec V8 isolate
+// with deny-by-default permissions. Falls back to AsyncFunction for unsandboxed mode.
 
 import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
 import { transformSync } from "esbuild";
 import { $ } from "zx";
+import { disposeSandbox, executeInSandbox } from "./sandbox-executor.js";
 import { type TypeCheckError, typeCheck } from "./type-checker.js";
 
 const nodeRequire: NodeRequire = createRequire(
@@ -42,6 +43,8 @@ interface ExecutionOptions {
   shellPrefix?: string;
   userPackages?: Record<string, unknown>;
   typeDefs?: string;
+  /** When true, run code inside a secure-exec V8 isolate. Default: false (legacy). */
+  sandboxed?: boolean;
 }
 
 // --- Transpile ---
@@ -135,9 +138,88 @@ function parseTypeErrors(diagnosticText: string): ExecutionError[] {
   return errors;
 }
 
+// --- Shared helpers ---
+
+export function truncateLogs(logs: string[], maxSize: number): string[] {
+  if (maxSize <= 0) return logs;
+  let totalSize = logs.reduce((sum, l) => sum + l.length, 0);
+  const result = [...logs];
+  while (totalSize > maxSize && result.length > 1) {
+    const last = result.pop()!;
+    totalSize -= last.length;
+  }
+  if (totalSize > maxSize && result.length > 0) {
+    return [`${result[0].slice(0, maxSize)}\n... (truncated)`];
+  }
+  return result;
+}
+
+// Re-export for cleanup on extension unload
+export { disposeSandbox };
+
 // --- Execute ---
 
 export async function executeCode(
+  code: string,
+  options: ExecutionOptions,
+): Promise<ExecutionResult> {
+  const {
+    cwd,
+    timeout = 30_000,
+    maxOutputSize = 100_000,
+    sandboxed = false,
+  } = options;
+
+  // Type-check with real TS compiler if typeDefs provided (both paths)
+  if (options.typeDefs) {
+    const tcResult = typeCheck(rewriteImports(code), options.typeDefs);
+    if (tcResult.errors.length > 0) {
+      return {
+        success: false,
+        errorKind: "type",
+        errors: tcResult.errors.map((e: TypeCheckError) => ({
+          line: e.line,
+          message: e.message,
+        })),
+        logs: [],
+        elapsedMs: 0,
+      };
+    }
+  }
+
+  // Transpile TS → JS before routing (sandbox and unsandboxed both need this)
+  let transpiledCode: string;
+  try {
+    transpiledCode = transpile(code);
+  } catch (err: any) {
+    const errors = parseTypeErrors(err.message || String(err));
+    return {
+      success: false,
+      errorKind: "type",
+      errors:
+        errors.length > 0
+          ? errors
+          : [{ line: 0, message: err.message || "Transpilation failed" }],
+      logs: [],
+      elapsedMs: 0,
+    };
+  }
+
+  // Route through secure-exec V8 isolate sandbox when requested
+  if (sandboxed) {
+    return executeInSandbox(transpiledCode, {
+      cwd,
+      timeout,
+      maxOutputSize,
+      userPackages: options.userPackages,
+    });
+  }
+
+  // Unsandboxed AsyncFunction path
+  return executeUnsandboxed(code, options);
+}
+
+async function executeUnsandboxed(
   code: string,
   options: ExecutionOptions,
 ): Promise<ExecutionResult> {
@@ -148,31 +230,12 @@ export async function executeCode(
     signal: _signal,
     shellPrefix,
     userPackages = {},
-    typeDefs,
   } = options;
 
   const start = performance.now();
   const logs: string[] = [];
 
-  // 0. Type-check with real TS compiler if typeDefs provided
-  if (typeDefs) {
-    const tcResult = typeCheck(rewriteImports(code), typeDefs);
-    if (tcResult.errors.length > 0) {
-      const elapsedMs = performance.now() - start;
-      return {
-        success: false,
-        errorKind: "type",
-        errors: tcResult.errors.map((e: TypeCheckError) => ({
-          line: e.line,
-          message: e.message,
-        })),
-        logs: [],
-        elapsedMs,
-      };
-    }
-  }
-
-  // 1. Transpile TS → JS
+  // Transpile TS → JS
   let jsCode: string;
   try {
     jsCode = transpile(code);
@@ -262,17 +325,7 @@ export async function executeCode(
   const elapsedMs = performance.now() - start;
 
   // 4. Truncate logs if needed
-  let finalLogs = logs;
-  if (maxOutputSize > 0) {
-    let totalSize = finalLogs.reduce((sum, l) => sum + l.length, 0);
-    while (totalSize > maxOutputSize && finalLogs.length > 1) {
-      const last = finalLogs.pop();
-      if (last !== undefined) totalSize -= last.length;
-    }
-    if (totalSize > maxOutputSize && finalLogs.length > 0) {
-      finalLogs = [`${finalLogs[0].slice(0, maxOutputSize)}\n... (truncated)`];
-    }
-  }
+  const finalLogs = truncateLogs(logs, maxOutputSize);
 
   return {
     success: true,

@@ -167,7 +167,7 @@ async function main() {
     const result = await executeCode(code, { cwd });
     assert.equal(result.success, true);
     assert.equal(typeof result.returnValue, "string");
-    assert.ok(result.returnValue.length > 0);
+    assert.ok((result.returnValue as string).length > 0);
   });
 
   await test("ESM imports pass type-check when typeDefs provided", async () => {

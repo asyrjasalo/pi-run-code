@@ -6,24 +6,33 @@ Pi CLI extension that adds a `run_code` tool for executing TypeScript/JavaScript
 
 `pi install git:github.com/asyrjasalo/pi-run-code`
 
-## Environment
+## Security
 
-The extension **does not load** unless you acknowledge that `run_code` executes arbitrary TypeScript with Node.js APIs and zx (`$`) shell access in the agent’s working directory.
+By default, `run_code` executes code inside a **secure-exec V8 isolate sandbox**:
 
-Set this **before** starting Pi (shell profile, launchd env, IDE terminal env, CI secrets, etc.):
+- ✅ **Filesystem** — read/write via `require("fs")` (real host files)
+- ✅ **Network** — `fetch()` and `require("http")` work
+- ✅ **Shell** — `$` shim via `child_process` (`await $\`echo hi\``)
+- ✅ **Packages** — `require()` resolves from host `node_modules`
+- ✅ **Env** — `process.env` available
+- ✅ **Return values** — `return expr` works
 
-| Variable | Meaning |
-|----------|---------|
-| `PI_RUN_CODE_UNSANDBOXED` | Must be set to a truthy acknowledgment (see below). If unset or invalid, the extension logs a warning and registers no tools. |
+Safety comes from the **V8 isolate boundary** + resource limits:
 
-**Accepted values** (trimmed, compared case-insensitively): `1`, `true`, `yes`.
+- Separate heap/stack (cannot corrupt host process memory)
+- Memory limit: 128 MB per execution
+- CPU time limit: 15 s per execution
+- Cannot escape the V8 isolate
 
-Examples:
+### Unsandboxed (legacy) mode
+
+For native zx `$` (full ProcessPromise API) and direct host globals, set `PI_RUN_CODE_UNSANDBOXED` before starting Pi:
 
 ```sh
 export PI_RUN_CODE_UNSANDBOXED=1
-# or: true, yes, YES, True, …
 ```
+
+> ⚠️ **Warning**: Unsandboxed mode runs code via `AsyncFunction` in the host process with no isolation.
 
 ## Usage
 
@@ -37,10 +46,10 @@ In Pi, say "run code" followed by what you want executed:
 
 The agent will call `run_code` with TS/JS code. Available inside code:
 
-- `$` (zx shell) — run shell commands: `` const out = await $`ls` ``
-- `print(...)` — output to include in result
-- `console.log/warn/error` — captured output
-- `require(...)` — import any Node.js module (fs, path, os, etc.)
+- `$` (zx shell) - run shell commands: `` const out = await $`ls` ``
+- `print(...)` - output to include in result
+- `console.log/warn/error` - captured output
+- `require(...)` - import any Node.js module (fs, path, os, etc.)
 
 Only TypeScript and JavaScript syntax is accepted.
 

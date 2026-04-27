@@ -13,6 +13,8 @@ export interface RunCodeToolOptions {
   maxOutputSize?: number;
   packageDescriptions?: string;
   typeDefs?: string;
+  /** When true, execute inside a secure-exec V8 isolate. Default: false. */
+  sandboxed?: boolean;
 }
 
 export function createRunCodeTool(options: RunCodeToolOptions): ToolDefinition {
@@ -24,6 +26,7 @@ export function createRunCodeTool(options: RunCodeToolOptions): ToolDefinition {
     maxOutputSize,
     packageDescriptions,
     typeDefs,
+    sandboxed = false,
   } = options;
 
   const packageSection = packageDescriptions
@@ -69,6 +72,7 @@ Only TS/JS syntax accepted. Return a value to include it in the result.`,
         shellPrefix,
         userPackages,
         typeDefs,
+        sandboxed,
       });
 
       if (!result.success) {

@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "esbuild": "^0.27.3",
+    "secure-exec": "^0.2.1",
     "typescript": "^5.9.3",
     "zx": "^8.8.5"
   },
