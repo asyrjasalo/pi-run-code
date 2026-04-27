@@ -1,4 +1,5 @@
-node_modules/
 dist/
-.cache/
-.pi/
+node_modules/
+
+.pi-lens/
+
