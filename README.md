@@ -10,12 +10,12 @@ Pi CLI extension that adds a `run_code` tool for executing TypeScript/JavaScript
 
 By default, `run_code` executes code inside a **secure-exec V8 isolate sandbox**:
 
-- ✅ **Filesystem** — read/write via `require("fs")` (real host files)
-- ✅ **Network** — `fetch()` and `require("http")` work
-- ✅ **Shell** — `$` shim via `child_process` (`await $\`echo hi\``)
-- ✅ **Packages** — `require()` resolves from host `node_modules`
-- ✅ **Env** — `process.env` available
-- ✅ **Return values** — `return expr` works
+- **Filesystem** — read/write via `require("fs")` (real host files)
+- **Network** — `fetch()` and `require("http")` work
+- **Shell** — `$` shim via `child_process` (`await $\`echo hi\``)
+- **Packages** — `require()` resolves from host `node_modules`
+- **Env** — `process.env` available
+- **Return values** — `return expr` works
 
 Safety comes from the **V8 isolate boundary** + resource limits:
 
@@ -24,7 +24,7 @@ Safety comes from the **V8 isolate boundary** + resource limits:
 - CPU time limit: 15 s per execution
 - Cannot escape the V8 isolate
 
-### Unsandboxed (legacy) mode
+### Unsandboxed mode
 
 For native zx `$` (full ProcessPromise API) and direct host globals, set `PI_RUN_CODE_UNSANDBOXED` before starting Pi:
 
@@ -32,7 +32,7 @@ For native zx `$` (full ProcessPromise API) and direct host globals, set `PI_RUN
 export PI_RUN_CODE_UNSANDBOXED=1
 ```
 
-> ⚠️ **Warning**: Unsandboxed mode runs code via `AsyncFunction` in the host process with no isolation.
+> **Warning**: Unsandboxed mode runs code via `AsyncFunction` in the host process with no isolation.
 
 ## Usage
 

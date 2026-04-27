@@ -43,7 +43,7 @@ interface ExecutionOptions {
   shellPrefix?: string;
   userPackages?: Record<string, unknown>;
   typeDefs?: string;
-  /** When true, run code inside a secure-exec V8 isolate. Default: false (legacy). */
+  /** When true, run code inside a secure-exec V8 isolate. Default: false. */
   sandboxed?: boolean;
 }
 
@@ -145,8 +145,8 @@ export function truncateLogs(logs: string[], maxSize: number): string[] {
   let totalSize = logs.reduce((sum, l) => sum + l.length, 0);
   const result = [...logs];
   while (totalSize > maxSize && result.length > 1) {
-    const last = result.pop()!;
-    totalSize -= last.length;
+    const last = result.pop();
+    if (last) totalSize -= last.length;
   }
   if (totalSize > maxSize && result.length > 0) {
     return [`${result[0].slice(0, maxSize)}\n... (truncated)`];
