@@ -1,6 +1,6 @@
 # pi-run-code
 
-Pi CLI extension that adds a `run_code` tool for executing TypeScript/JavaScript code. Does not replace or disable existing Pi tools.
+Pi CLI extension that adds a `run_code` tool for executing TypeScript/JavaScript code.
 
 ## Install
 
@@ -17,7 +17,7 @@ By default, `run_code` executes code inside a **secure-exec V8 isolate sandbox**
 - **Env** — `process.env` available
 - **Return values** — `return expr` works
 
-Safety comes from the **V8 isolate boundary** + resource limits:
+**V8 isolate boundary** + resource limits:
 
 - Separate heap/stack (cannot corrupt host process memory)
 - Memory limit: 128 MB per execution
