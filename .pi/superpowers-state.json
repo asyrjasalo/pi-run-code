@@ -1,19 +1,19 @@
 {
   "workflow": {
     "phases": {
-      "brainstorm": "pending",
-      "plan": "pending",
-      "execute": "active",
-      "verify": "pending",
-      "review": "pending",
-      "finish": "pending"
+      "brainstorm": "complete",
+      "plan": "complete",
+      "execute": "complete",
+      "verify": "complete",
+      "review": "complete",
+      "finish": "complete"
     },
-    "currentPhase": "execute",
+    "currentPhase": "finish",
     "artifacts": {
       "brainstorm": null,
       "plan": null,
-      "execute": null,
-      "verify": null,
+      "execute": "d0ea082",
+      "verify": "73/73 tests pass",
       "review": null,
       "finish": null
     },
@@ -27,7 +27,7 @@
     }
   },
   "tdd": {
-    "phase": "red-pending",
+    "phase": "green",
     "testFiles": [
       "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/test/executor.test.ts",
       "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/test/sandbox-executor.test.ts",
@@ -39,7 +39,7 @@
       "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/index.ts",
       "/Users/asyrjasalo/.pi/agent/git/github.com/asyrjasalo/pi-run-code/src/run-code-tool.ts"
     ],
-    "redVerificationPending": true
+    "redVerificationPending": false
   },
   "debug": {
     "active": false,
@@ -47,7 +47,7 @@
     "fixAttempts": 0
   },
   "verification": {
-    "verified": false,
+    "verified": true,
     "verificationWaived": false
   }
 }
