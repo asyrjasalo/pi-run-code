@@ -24,7 +24,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "tsc": "tsc --noEmit",
-    "prepare": "simple-git-hooks"
+    "prepare": "node -e \"if(require('fs').existsSync('./node_modules/.bin/simple-git-hooks'))require('child_process').execSync('simple-git-hooks',{stdio:'inherit'})\""
   },
   "pi": {
     "extensions": [
